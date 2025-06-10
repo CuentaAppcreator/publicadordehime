@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Publicador Zinecia</title>
+  <style>
+    body {
+      background-color: #111;
+      color: gold;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      color: gold;
+      text-align: center;
+    }
+    textarea, input, button, label {
+      width: 100%;
+      margin-top: 10px;
+    }
+    textarea {
+      height: 150px;
+      background: #222;
+      color: #ffd700;
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .categorias {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .categorias label {
+      background: #222;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid gold;
+      cursor: pointer;
+    }
+    button {
+      background: gold;
+      color: black;
+      font-weight: bold;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #ffcc00;
+    }
+    input[type="password"] {
+      background: #222;
+      color: #ffd700;
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🟡 Panel Zinecia: Publicar Código</h1>
+
+<input type="password" id="token" placeholder="🔑 Ingresa tu Token de GitHub...">
+
+<textarea id="codigo" placeholder="Pega aquí tu código HTML..."></textarea>
+
+<div class="categorias">
+  <label><input type="checkbox" value="ACCION"> Acción</label>
+  <label><input type="checkbox" value="ESTRENO"> Estreno</label>
+  <label><input type="checkbox" value="COMEDIA"> Comedia</label>
+  <label><input type="checkbox" value="ANIMACION"> Animación</label>
+  <label><input type="checkbox" value="ROMANCE"> Romance</label>
+  <label><input type="checkbox" value="TERROR"> Terror</label>
+</div>
+
+<button onclick="publicar()">📤 Publicar</button>
+
+<script>
+  const REPO = 'Zinecia/Home';
+  const FILE = 'index.html';
+
+  async function publicar() {
+    const token = document.getElementById('token').value.trim();
+    if (!token) return alert("⚠️ Ingresa tu token de GitHub");
+
+    const codigo = document.getElementById('codigo').value.trim();
+    if (!codigo) return alert("⚠️ Escribe algún código primero");
+
+    const categorias = [...document.querySelectorAll('input[type=checkbox]:checked')].map(e => e.value);
+    if (!categorias.length) return alert("⚠️ Selecciona al menos una categoría");
+
+    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`);
+    const data = await res.json();
+    const contenido = atob(data.content);
+    const sha = data.sha;
+
+    let nuevoContenido = contenido;
+
+    categorias.forEach(cat => {
+      const marcador = `<!--SUBIR ${cat}-->`;
+      const partes = nuevoContenido.split(marcador);
+      if (partes.length === 2) {
+        nuevoContenido = partes[0] + marcador + '\n' + codigo + '\n' + partes[1];
+      } else {
+        alert(`❌ No se encontró el marcador <!--SUBIR ${cat}-->`);
+      }
+    });
+
+    const actualizado = btoa(unescape(encodeURIComponent(nuevoContenido)));
+
+    const response = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: "✨ Código agregado automáticamente desde el panel.",
+        content: actualizado,
+        sha: sha
+      })
+    });
+
+    if (response.ok) {
+      alert("✅ Código publicado exitosamente");
+    } else {
+      alert("❌ Error al subir el código");
+    }
+  }
+</script>
+
+</body>
+</html>
